@@ -1,0 +1,164 @@
+<?php
+require_once('../connectMySQL.php');
+require_once('../loginverification.php');
+if(logged_in()){
+$session_user_id = $_SESSION['user_id'];
+$question_count = $_SESSION['question_count'];
+$exam_id = 0;
+date_default_timezone_set('Asia/Manila');
+$date = date('Y/m/d H:i:s');
+
+if(isset($_POST['btn_submit1']))
+{
+    //TRANSFER DATA exam_id
+    $query = "SELECT * FROM exam_header where user_id = '".$session_user_id."'";
+    $result = $conn->query($query);
+    if ($result->num_rows > 0) 
+    {
+      while($row = $result->fetch_assoc())
+      {
+        $exam_id = $row['exam_id'];
+      }
+
+      $sql = "INSERT INTO exam_child (question_id,exam_id,riasec,score) VALUES ('". $_POST['question_id'] ."','". $exam_id ."','". $_POST['riasec'] ."','". $_POST['options'] ."')";
+      $result1 = mysqli_query($conn,$sql);
+    }
+    else
+    {
+      //INSERT EXAM HEADER
+      $sql = "INSERT INTO exam_header (user_id,date) VALUES ('". $session_user_id ."','". $date ."')";
+      $result1 = mysqli_query($conn,$sql);
+
+      //TRANSFER DATA exam_id
+      $query = "SELECT * FROM exam_header where user_id = '".$session_user_id."'";
+      $result2 = $conn->query($query);
+      while($row = $result2->fetch_assoc())
+      {
+         $exam_id = $row['exam_id'];
+      }
+      //INSERT CHILD EXAM
+      $sql = "INSERT INTO exam_child (question_id,exam_id,riasec,score) VALUES ('". $_POST['question_id'] ."','". $exam_id ."','". $_POST['riasec'] ."','". $_POST['options'] ."')";
+      $result1 = mysqli_query($conn,$sql);
+    }
+
+}
+
+?>
+<!DOCTYPE html>
+<html style="font-size: 16px;" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="keywords" content="Interest">
+    <meta name="description" content="">
+    <title>Home</title>
+    <link rel="stylesheet" href="nicepage.css" media="screen">
+    <link rel="stylesheet" href="Home.css" media="screen">
+    <script class="u-script" type="text/javascript" src="jquery.js" defer=""></script>
+    <script class="u-script" type="text/javascript" src="nicepage.js" defer=""></script>
+    <meta name="theme-color" content="#478ac9">
+    <meta property="og:title" content="Home">
+    <meta property="og:type" content="website">
+    <meta data-intl-tel-input-cdn-path="intlTelInput/">
+    <style>
+        .range-container {
+            position: absolute;
+            bottom: 0px; /* Adjust this value to control the distance from the bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 1px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Style for the range input and label */
+        .range-label {
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Style for the range input itself */
+        #option_a {
+            margin: 250px auto 0; /* Adjust the margin values as needed */
+            width: 70%;
+            padding-top: 20px; /* Adjust the padding-top value to maintain spacing */
+        }
+    </style>
+</head>
+<body class="u-body u-xl-mode" data-lang="en">
+    <header class="u-clearfix u-header u-white u-header" id="sec-ba83">
+        <a class="u-image u-logo u-image-1" data-image-width="410" data-image-height="378">
+            <img src="../images/logo.png" class="u-logo-image u-logo-image-1">
+        </a>
+    </header>
+
+    <?php
+        
+
+    $query1 = "SELECT count(answer_id)as count FROM exam_child WHERE exam_id = '".$exam_id."'";
+    $result1 = $conn->query($query1);
+    while($row1 = $result1->fetch_assoc())
+    {
+      $_SESSION['question_count'] = $question_count + 1;
+    }
+   
+
+
+    $query = "SELECT * FROM questionnaire 
+    where category = 'INTEREST' and question_id not in (SELECT question_id FROM exam_child WHERE exam_id = '".$exam_id."')
+    ORDER BY RAND() limit 1";
+    $result = $conn->query($query);
+    if ($_SESSION['question_count'] > 10) 
+    {
+      include 'value_questions.php';
+      $_SESSION['question_count'] = $_SESSION['question_count'] - 1;
+    }
+    else
+    {
+      while($row = $result->fetch_assoc())
+      {
+        echo'<form method="post" action="interest_questions.php">
+    <section class="u-clearfix u-grey-25 u-section-1" id="sec-da3f">
+        <div class="u-clearfix u-sheet u-sheet-1">
+            <h1 class="u-align-center u-custom-font u-text u-text-body-alt-color u-text-default u-text-font u-title u-text-1">Interest</h1>'.$_SESSION['question_count'].'
+            <div class="u-align-center u-container-style u-grey-5 u-group u-radius-50 u-shape-round u-group-1">
+                <div class="u-container-layout u-valign-bottom u-container-layout-1">
+                    <h4>'.$row['question'].'</h4><br>
+                    <div>
+                        <p>Disagree
+                            <input type="range" value="1" min="1" max="5" step="1" name="options" id="option_a" autocomplete="off" required>Agree
+                        </p>
+                    </div>
+                    <button type="submit" name="btn_submit1" class="u-active-palette-2-base u-border-none u-btn u-btn-round u-button-style u-color-scheme-summer-time u-hover-palette-2-base u-palette-1-base u-radius-50 u-btn-1">NEXT <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    ';
+}
+}
+}
+else
+{
+header('location:../index.php');
+}?>
+
+</body>
+
+<script>
+    function start_exam(){
+       $.ajax({
+       url:"question.php",
+       method:"POST",
+       success:function(data){
+        $('#main_body').html(data);
+       }
+      })
+    }  
+    
+    </script>
+    
+</html>
